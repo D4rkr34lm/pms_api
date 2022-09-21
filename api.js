@@ -34,7 +34,7 @@ const server = https.createServer(credentials, (req, res) => {
                 createAccount(data, res);
                 break;
             case "login":
-                login(data);
+                login(data, res);
                 break;
         }
     }
@@ -46,16 +46,14 @@ const server = https.createServer(credentials, (req, res) => {
 }).listen(8000);
 
 async function createAccount(data, res){
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(data.password, salt);
+    const passwordHash = await bcrypt.hash(data.password, 10);
 
     const dublicateTestQuerry = "SELECT * FROM logindata WHERE  username='" + data.username + "'";
     con.query(dublicateTestQuerry, (err, result) => 
     {
         if (err) throw err;
-        if(!result || result.length > 0){
+        if(result.length > 0){
             console.log("Account already exsists");
-            res.status(400);
             res.write("Account already exsists");
         }
         else{
@@ -68,6 +66,26 @@ async function createAccount(data, res){
     })
 }
 
-function login(data){
+async function login(data, res){
+    const passwordQuerry = "SELECT password FROM logindata WHERE  username='" + data.username + "'";
+    con.query(passwordQuerry, (err, result) => {
+        if (err) throw err;
 
+        if(result.length == 0){
+            console.log("Login failed: Account " + data.username + " does not exist");
+            res.write("Login Failed");
+        }
+        else{
+            const passwordHash = result[0].password.toString();
+            const status = bcrypt.compareSync(data.password, passwordHash);
+            console.log(status);
+            if(status){
+                console.log("Login succsesfull");
+            }
+            else{
+                console.log("Login failed: Wrong Password");
+                res.write("Login failed");
+            }
+        }
+    });
 }
