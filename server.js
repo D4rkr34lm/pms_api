@@ -3,7 +3,7 @@ const express = require("express");
 const mysql = require("mysql");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const bodyParser = require('body-parser')
+const bodyParser = require('body-parser');
 
 const database = mysql.createConnection(JSON.parse(fs.readFileSync('keys/dbKey.json', 'utf8')));
 
@@ -12,6 +12,19 @@ const jwtSecret = fs.readFileSync('keys/jwtSecret.key').toString();
 const port = 3001;
 const app = express();
 app.use(bodyParser.json())
+
+app.get("/account/data", (request, response) =>{
+    console.log("Recived request for account data");
+    
+    jwt.verify(request.headers.authorization, jwtSecret, (err, token) => {
+        if(err === null){
+            response.status(200).send();
+        }
+        else{
+            response.status(401).send();
+        }
+    });
+});
 
 app.post("/account/login", (request, response) => {
     console.log("Recived login request");
@@ -36,7 +49,7 @@ app.post("/account/login", (request, response) => {
                     username: data.username
                 }
                 
-                const token = jwt.sign(payload, jwtSecret)
+                const token = jwt.sign(payload, jwtSecret, {expiresIn: "8h"})
 
                 response.status(200).send(token.toString());
             }
@@ -49,7 +62,9 @@ app.post("/account/login", (request, response) => {
 });
 
 app.post("/account/create", (request, response) => {
+    console.log("Recived account creation request");
     const data = request.body;
+    console.log(data);
     const passwordHash = bcrypt.hashSync(data.password, 10);
 
     const dublicateTestQuerry = "SELECT * FROM logindata WHERE  username='" + data.username + "'";
